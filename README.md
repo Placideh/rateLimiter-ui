@@ -2,29 +2,49 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.3.
 
+A distributed rate limiting system for a notification service that handles SMS and email communications
+
+
+## Common Development Tasks
+
+This section describes some common development tasks.
+
+## Get The Project
+This section describes how to get the project on your computer.
+1. Download the project here [Project](https://github.com/Placideh/rateLimiter-ui.git).
+2. Unzip the file.
+
+3. To go to the project Directory. Open terminal and type
+ ```ps 
+ cd rateLimter-ui 
+
+ ls  #to view all directories and files contains the project 
+ 
+ cd src 
+ mkdir environemtns # create environments folder 
+ 
+ touch environment.ts # inside the created folder create environment.s file
+  
+```
+
 ## Development server
 
 To start a local development server, run:
 
 ```bash
+# add the following for SERVER URL
+export const environment = {
+    production: false,
+    SERVER_URL: 'ADD_SERVER_URL_HERE' 
+  };
+
 ng serve
+
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-## Code scaffolding
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
 
 ## Building
 
@@ -35,25 +55,3 @@ ng build
 ```
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

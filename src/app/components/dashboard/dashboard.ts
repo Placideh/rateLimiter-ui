@@ -108,9 +108,9 @@ import { firstValueFrom } from 'rxjs';
         }
 
         <!-- Success Message -->
-        @if(successMessage()) {
+        @if(api.successMessage()) {
           <div class="bg-green-500/10 border border-green-500/20 text-green-600 p-4 rounded-xl mb-8">
-            {{ successMessage() }}
+            {{ api.successMessage() }}
           </div>
         }
 
@@ -265,30 +265,23 @@ export class Dashboard {
     }
   }
 
- // Handle notification dispatch 
   async handleDispatch(event: SubmitEvent) {
     event.preventDefault();
-    
-    this.successMessage.set(null);
-
-    // handle validation and state automatically
+    this.api.successMessage.set(null);
+    this.api.lastError.set(null); // Clear any previous errors
+  
     await submit(this.notifyForm, async () => {
       const payload = this.notifyModel();
-
       
       try {
         let response;
         
         if (this.notifyMode() === 'SMS') {
-
-          // Send SMS
           response = await this.api.sendSms({
             to: payload.phone,
             message: payload.message,
           }).toPromise();
         } else {
-
-          // Send Email
           response = await this.api.sendEmail({
             to: payload.email,
             subject: payload.subject,
@@ -296,21 +289,72 @@ export class Dashboard {
           }).toPromise();
         }
         
-        if (response) {
-          // update rate limit info
+        if (response) {          
           this.api.updateRateLimitInfo(response);
           
-          this.successMessage.set(`${this.notifyMode()} sent successfully!`);
-          console.log('Notification sent:', response);
+          if (response.status === 'SENT') {
+            // Success - show message and close modal
+            this.api.successMessage.set(response.message || `${this.notifyMode()} sent successfully!`);
+            console.log('Notification sent:', response);
+            
+            // Close modal after success
+            setTimeout(() => {
+              this.closeNotifyModal();
+            }, 1500);
+            
+          } else {
+            // Handle non-200 responses that aren't caught by error interceptor
+            this.api.lastError.set(response.message || `Failed to send ${this.notifyMode()}`);
+            console.error('Notification failed:', response);
+            
+            // Stay on modal to show error - let user retry
+          }
+        }
+      } catch (error: any) {
+        // Handle HTTP errors (4xx, 5xx)
+        console.error('Notification error:', error);
+        
+        // Rate limit exceeded (429)
+        if (error.status === 429) {
+          const errorMessage = error.error?.message || 'Rate limit exceeded. Please try again later.';
+          this.api.handleRateLimitError(errorMessage);
           
-          // close modal after 2 seconds
+          // Show error in dashboard before closing modal
+          this.api.lastError.set(errorMessage);
+          
+          // Close modal after rate limit error
+          setTimeout(() => {
+            this.closeNotifyModal();
+            // Dashboard will show the rate limit error
+          }, 2000);
+          
+        } else if (error.status === 400) {
+          // Validation error
+          this.api.lastError.set(error.error?.message || 'Invalid request. Please check your input.');
+          
+          // Stay on modal to let user fix input
+          
+        } else if (error.status === 401 || error.status === 403) {
+          // Auth error
+          this.api.lastError.set('Authentication failed. Please log in again.');
+          
+          // Close modal and redirect to login
+          setTimeout(() => {
+            this.closeNotifyModal();
+            this.router.navigate(['/login']);
+          }, 2000);
+          
+        } else {
+          // Generic server error
+          this.api.lastError.set('Server error. Please try again later.');
+          
+          // Close modal after error
           setTimeout(() => {
             this.closeNotifyModal();
           }, 2000);
         }
-      } catch (error: any) {
-        console.error('Notification error:', error);
-        this.api.handleRateLimitError(error);
+        
+        // Re-throw if needed for submit handler
         throw error;
       }
     });

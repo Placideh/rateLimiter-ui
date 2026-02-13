@@ -5,12 +5,13 @@ import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth';
 import { RateLimitInfo } from '../models/rate-limit';
 import { Tier } from '../models/tier';
 import { NotificationResponse, SendEmailRequest, SendSmsRequest } from '../models/notificaiton';
+import { environment } from '../../environments/environment';
 
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
-  private readonly baseUrl = import.meta.env.APP_SERVER_URL;
+  private readonly baseUrl = environment.SERVER_URL;
 
   currentUser = signal<AuthResponse | null>(null);
   token = signal<string | null>(localStorage.getItem('token'));
@@ -22,6 +23,7 @@ export class ApiService {
   isRateLimited = signal(false);
   retryAfterSeconds = signal<number>(0);
   lastError = signal<string | null>(null);
+  successMessage = signal<string | null>(null);
 
   constructor() {
     const storedUser = localStorage.getItem('currentUser');
@@ -38,7 +40,7 @@ export class ApiService {
 
   
   tiersResource = rxResource<Tier[], { jwt: string | null } | undefined>({
-    // reactively wait for the token to be set
+    // Params reactively wait for the token to be set
     params: () => (this.isAuthenticated() && this.token()) ? { jwt: this.token() } : undefined,
     stream: ({ params }) => {
       return this.http.get<Tier[]>(`${this.baseUrl}/admin/tiers`, {
@@ -67,6 +69,7 @@ export class ApiService {
     localStorage.setItem('currentUser', JSON.stringify(response));
     
     this.token.set(response.token);
+    this.apiKey.set(response.apiKey);
     this.currentUser.set(response);
     this.isAuthenticated.set(true);
   }
@@ -87,7 +90,7 @@ export class ApiService {
 
   
   sendSms(payload: SendSmsRequest) {
-    console.log("do we have the api key :  ",this.apiKey);
+    console.log("do we have the api key :  ",this.apiKey());
     return this.http.post<NotificationResponse>(
       `${this.baseUrl}/notifications/sms`, 
       payload,
@@ -122,12 +125,17 @@ export class ApiService {
       if (response.rateLimitInfo.throttlingLevel === 'SOFT') {
         console.warn('About reaching rate limit:', response.rateLimitInfo.throttlingMessage);
       }
+    }else if(response.status ==="SENT") {
+      console.log(response.message);
+      this.successMessage.set(response.message);
+
     }
   }
 
 
   handleRateLimitError(error: any): void {
     if (error.status === 429) {
+      console.log("are we here...");
       this.isRateLimited.set(true);
       this.retryAfterSeconds.set(error.error.retryAfter || 60);
       this.lastError.set(error.error.message || 'Rate limit exceeded');
@@ -143,10 +151,12 @@ export class ApiService {
           algorithmUsed: 'BUCKET4J'
         });
       }
+      this.lastError.set(error.error?.message || 'error Sent Successfully');
 
       this.startRetryCountdown();
     } else {
-      this.lastError.set(error.error?.message || 'An error occurred');
+      console.log("The error : ",error.error?.message)
+      this.lastError.set(error.error?.message || `Error occured!`);
     }
   }
 

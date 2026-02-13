@@ -4,12 +4,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = import.meta.env.APP_SERVER_URL;
+  private apiUrl = environment.SERVER_URL;
   currentUser = signal<AuthResponse | null>(null);
   
   constructor(
@@ -32,6 +33,7 @@ export class AuthService {
           // Store user data and API key
           localStorage.setItem('currentUser', JSON.stringify(response));
           localStorage.setItem('token', response.token);
+          localStorage.setItem('apiKey', response.apiKey);
           this.currentUser.set(response);
         })
       );
@@ -45,6 +47,7 @@ export class AuthService {
           // direct login after successfully register
           localStorage.setItem('currentUser', JSON.stringify(response));
           localStorage.setItem('token', response.token);
+          localStorage.setItem('apiKey', response.apiKey);
           this.currentUser.set(response);
         })
       );
